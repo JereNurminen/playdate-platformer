@@ -1,0 +1,47 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "test.tmx",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "foreground.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "test.tmx": {
+            "scale": 1.3414,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 235.94751751901,
+                "y": 273.594751751901
+            }
+        }
+    },
+    "last.exportedFilePath": "/Users/jnurminen/pd",
+    "last.imagePath": "/Users/jnurminen/pd/src/img",
+    "map.height": 15,
+    "map.lastUsedExportFilter": "All Files (*)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 25,
+    "openFiles": [
+        "foreground.tsx",
+        "test.tmx"
+    ],
+    "project": "untitled-platformer.tiled-project",
+    "recentFiles": [
+        "foreground.tsx",
+        "test.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    },
+    "tileset.useTransparentColor": true
+}
