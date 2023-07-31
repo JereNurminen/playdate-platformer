@@ -1,0 +1,3 @@
+build:
+	@pdc src/ build
+

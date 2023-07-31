@@ -32,7 +32,7 @@ local function setIfNotNil(table, prop, value)
 end
 
 local playerMoveSystem = tiny.processingSystem()
-playerMoveSystem.filter = tiny.requireAll("speed", "pos", "isPlayer", "momentum", "isGrounded", "jumpStrength")
+playerMoveSystem.filter = tiny.requireAll("speed", "pos", "isPlayer", "momentum", "isGrounded", "jumpStrength", "coyoteTime", "timeSinceGrounded")
 function playerMoveSystem:process(e, dt)
 	local moveVector = playdate.geometry.vector2D.new(0, 0)
 	if (playdate.buttonIsPressed(playdate.kButtonLeft)) then
@@ -42,9 +42,10 @@ function playerMoveSystem:process(e, dt)
 		moveVector.x = 1
 	end
 	if (playdate.buttonJustPressed(playdate.kButtonA)) then
-		if e.isGrounded then
+		if e.isGrounded or e.timeSinceGrounded <= e.coyoteTime then
 			print("hop")
 			moveVector.y = -e.jumpStrength
+			e.isGrounded = false
 		end
 	end
 
@@ -55,7 +56,6 @@ end
 local momentumSystem = tiny.processingSystem()
 momentumSystem.filter = tiny.requireAll("momentum", "pos")
 function momentumSystem:process(e, dt)
-	printTable(e.momentum)
 	local targetX = e.pos.x + e.momentum.x * dt
 	local targetY = e.pos.y + e.momentum.y * dt
 	local newX, newY = colliders:move(e, targetX, targetY)
@@ -110,6 +110,7 @@ function groundedSystem:process(e, dt)
 
 				if not wasGrounded and e.isGrounded then
 					print("just landed")
+					e.timeSinceGrounded = 0
 					if e.momentum ~= nil then
 						e.momentum.y = 0
 					end
@@ -118,7 +119,10 @@ function groundedSystem:process(e, dt)
 			end
 		end
 	end
+
 	e.isGrounded = false
+
+	e.timeSinceGrounded = e.timeSinceGrounded + dt
 end
 
 local player = {
@@ -135,9 +139,10 @@ local player = {
     fallAcceleration = 35,
 	jumpStrength = 300,
 	gravityIgnoreLength = 1,
-	timeSinceJump = 0,
 	collisionLayer = "player",
-	isGrounded = false
+	isGrounded = false,
+	timeSinceGrounded = 0,
+	coyoteTime = 0.1,
 }
 
 local ground = {
@@ -165,7 +170,7 @@ local platform = {
 local platform2 = {
 	pos = {
 		x = 110,
-		y = ScreenSize.y - 82
+		y = ScreenSize.y - 83
 	},
 	width = 50,
 	height = 20,
@@ -174,11 +179,11 @@ local platform2 = {
 }
 
 world:add(
+	groundedSystem,
 	playerMoveSystem,
     gravitySystem,
 	drawSystem,
-	momentumSystem,
-	groundedSystem
+	momentumSystem
 )
 
 addEntityWithCollisions(player)
