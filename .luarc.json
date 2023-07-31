@@ -1,0 +1,4 @@
+{
+    "workspace.library": ["./PlaydateSDK/CoreLibs", "$PLAYDATE_SDK_PATH/CoreLibs"],
+    "runtime.special" : {"import" : "require"}
+}
