@@ -6,6 +6,8 @@ import("CoreLibs/object")
 
 gfx = playdate.graphics;
 
+local testRoom = import "rooms/test"
+
 --
 -- GLOBALS
 DeltaTime = 0
@@ -25,10 +27,58 @@ local function addEntityWithCollisions(e)
 end
 --
 
-local function setIfNotNil(table, prop, value)
-	if table[prop] ~= nil then
-		table[prop] = value
+local function generateRoomEntities(room)
+	local layers = room.layers
+	local image = gfx.imagetable.new("images/foreground", 3)
+	local tilemap = gfx.tilemap.new()
+	tilemap:setImageTable(image)
+	local processedTiles = {}
+	local processedColliders = {}
+	for i = 1, #layers do
+		if layers[i].type == "tiles" then
+			local tiles = layers[i].tiles
+			for columnIndex = 0, room.width do
+				for rowIndex = 0, room.height do
+					local tile = tiles[rowIndex * room.width + columnIndex + 1]
+					local width = room.tilewidth
+					local height = room.tileheight
+					local x = (columnIndex) * width
+					local y = (rowIndex) * height
+					table.insert(
+						processedTiles,
+						{
+							width = width,
+							height = height,
+							pos = {
+								x = x,
+								y = y
+							},
+							tileIndex = tile
+						}
+				)
+				end
+			end
+		elseif layers[i].type == "colliders" then
+			local colliders = layers[i].colliders
+			for k = 1, #colliders do
+				local collider = colliders[k]
+				table.insert(
+					processedColliders,
+					{
+						pos = {
+							x = collider.x,
+							y = collider.y
+						},
+						width = collider.width,
+						height = collider.height,
+						collisionLayer = "platform"
+					}
+			)
+			end
+		end
 	end
+
+	return processedTiles, processedColliders
 end
 
 local playerMoveSystem = tiny.processingSystem()
@@ -43,7 +93,6 @@ function playerMoveSystem:process(e, dt)
 	end
 	if (playdate.buttonJustPressed(playdate.kButtonA)) then
 		if e.isGrounded or e.timeSinceGrounded <= e.coyoteTime then
-			print("hop")
 			moveVector.y = -e.jumpStrength
 			e.isGrounded = false
 		end
@@ -109,7 +158,6 @@ function groundedSystem:process(e, dt)
 				e.isGrounded = true
 
 				if not wasGrounded and e.isGrounded then
-					print("just landed")
 					e.timeSinceGrounded = 0
 					if e.momentum ~= nil then
 						e.momentum.y = 0
@@ -125,6 +173,16 @@ function groundedSystem:process(e, dt)
 	e.timeSinceGrounded = e.timeSinceGrounded + dt
 end
 
+local tileDrawSystem = tiny.processingSystem()
+tileDrawSystem.filter = tiny.requireAll("pos", "tileIndex")
+function tileDrawSystem:process(e, dt)
+	if e.tileIndex ~= 0 then
+		local image = gfx.imagetable.new("images/foreground", 3)
+		local tile = image:getImage(e.tileIndex)
+		tile:draw(e.pos.x, e.pos.y)
+	end
+end
+
 local player = {
 	isPlayer = true,
 	speed = 100,
@@ -135,9 +193,9 @@ local player = {
 	momentum = playdate.geometry.vector2D.new(0, 0),
 	width = 32,
 	height = 32,
-	color = gfx.kColorBlack,
+	color = gfx.kColorWhite,
     fallAcceleration = 35,
-	jumpStrength = 300,
+	jumpStrength = 400,
 	gravityIgnoreLength = 1,
 	collisionLayer = "player",
 	isGrounded = false,
@@ -145,53 +203,29 @@ local player = {
 	coyoteTime = 0.1,
 }
 
-local ground = {
-	pos = {
-		x = 0,
-		y = ScreenSize.y - 30
-	},
-	width = ScreenSize.x,
-	height = 30,
-	color = gfx.kColorWhite,
-	collisionLayer = "platform"
-}
-
-local platform = {
-	pos = {
-		x = 200,
-		y = ScreenSize.y - 50
-	},
-	width = 200,
-	height = 20,
-	color = gfx.kColorWhite,
-	collisionLayer = "platform"
-}
-
-local platform2 = {
-	pos = {
-		x = 110,
-		y = ScreenSize.y - 83
-	},
-	width = 50,
-	height = 20,
-	color = gfx.kColorWhite,
-	collisionLayer = "platform"
-}
-
 world:add(
 	groundedSystem,
 	playerMoveSystem,
     gravitySystem,
 	drawSystem,
-	momentumSystem
+	momentumSystem,
+	tileDrawSystem
 )
 
 addEntityWithCollisions(player)
-addEntityWithCollisions(ground)
-addEntityWithCollisions(platform)
-addEntityWithCollisions(platform2)
+
+local tiles, levelColliders = generateRoomEntities(testRoom)
+
+for i = 1, #levelColliders do
+	addEntityWithCollisions(levelColliders[i])
+end
+
+for i = 1, #tiles do
+	world:add(tiles[i])
+end
 
 world:refresh()
+gfx.setBackgroundColor(gfx.kColorBlack)
 
 function playdate:update(arg, ...)
 	playdate.timer.updateTimers()

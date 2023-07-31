@@ -1,3 +1,3 @@
 build:
-	@pdc src/ build
+	@pdc source/ build
 
