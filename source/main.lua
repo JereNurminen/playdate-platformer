@@ -3,6 +3,7 @@ local bump = import "bump/bump"
 
 import("CoreLibs/timer")
 import("CoreLibs/object")
+import("CoreLibs/animation")
 
 gfx = playdate.graphics;
 
@@ -35,8 +36,8 @@ local function generateRoomEntities(room)
 	local processedTiles = {}
 	local processedColliders = {}
 	for i = 1, #layers do
-		if layers[i].type == "tiles" then
-			local tiles = layers[i].tiles
+		if layers[i].type == "tilelayer" then
+			local tiles = layers[i].data
 			for columnIndex = 0, room.width do
 				for rowIndex = 0, room.height do
 					local tile = tiles[rowIndex * room.width + columnIndex + 1]
@@ -58,8 +59,8 @@ local function generateRoomEntities(room)
 				)
 				end
 			end
-		elseif layers[i].type == "colliders" then
-			local colliders = layers[i].colliders
+		elseif layers[i].name == "platforms" then
+			local colliders = layers[i].objects
 			for k = 1, #colliders do
 				local collider = colliders[k]
 				table.insert(
@@ -87,14 +88,24 @@ function playerMoveSystem:process(e, dt)
 	local moveVector = playdate.geometry.vector2D.new(0, 0)
 	if (playdate.buttonIsPressed(playdate.kButtonLeft)) then
 		moveVector.x = -1
-	end
-	if (playdate.buttonIsPressed(playdate.kButtonRight)) then
+		e.flip = gfx.kImageFlippedX
+		if (e.isGrounded) then 
+			e.currentAnimation = e.walkAnimation
+		end
+	elseif (playdate.buttonIsPressed(playdate.kButtonRight)) then
 		moveVector.x = 1
+		e.flip = gfx.kImageUnflipped
+		if (e.isGrounded) then 
+			e.currentAnimation = e.walkAnimation
+		end
+	elseif (e.isGrounded) then
+		e.currentAnimation = e.idleAnimation
 	end
 	if (playdate.buttonJustPressed(playdate.kButtonA)) then
 		if e.isGrounded or e.timeSinceGrounded <= e.coyoteTime then
 			moveVector.y = -e.jumpStrength
 			e.isGrounded = false
+			e.currentAnimation = e.jumpAnimation
 		end
 	end
 
@@ -124,20 +135,9 @@ function gravitySystem:process(e, dt)
 end
 
 local drawSystem = tiny.processingSystem()
-drawSystem.filter = tiny.requireAll("color", "pos", tiny.requireAny("width", "height"))
+drawSystem.filter = tiny.requireAll("pos", "flip")
 function drawSystem:process(e, dt)
-	local w = e.width or 1
-	local h = e.height or 1
-	if e.color == gfx.kColorWhite then
-		gfx.setColor(gfx.kColorWhite)
-		gfx.fillRect(e.pos.x, e.pos.y, w, h)
-		gfx.setColor(gfx.kColorBlack)
-		gfx.setLineWidth(2)
-		gfx.drawRect(e.pos.x, e.pos.y, w, h)
-	else -- default to black fill
-		gfx.setColor(e.color)
-		gfx.fillRect(e.pos.x, e.pos.y, w, h)
-	end
+	e.currentAnimation:draw(e.pos.x, e.pos.y, e.flip)
 end
 
 local collisionSyncSystem = tiny.processingSystem()
@@ -162,6 +162,7 @@ function groundedSystem:process(e, dt)
 					if e.momentum ~= nil then
 						e.momentum.y = 0
 					end
+					e.currentAnimation = e.idleAnimation
 				end
 				return
 			end
@@ -183,6 +184,10 @@ function tileDrawSystem:process(e, dt)
 	end
 end
 
+local playerIdleAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-idle"), true)
+local playerWalkAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-walk"), true)
+local playerJumpAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-jump"), false)
+
 local player = {
 	isPlayer = true,
 	speed = 100,
@@ -191,8 +196,8 @@ local player = {
 		y = screenCenter.y - 42
 	},
 	momentum = playdate.geometry.vector2D.new(0, 0),
-	width = 32,
-	height = 32,
+	width = 16,
+	height = 16,
 	color = gfx.kColorWhite,
     fallAcceleration = 35,
 	jumpStrength = 400,
@@ -201,6 +206,17 @@ local player = {
 	isGrounded = false,
 	timeSinceGrounded = 0,
 	coyoteTime = 0.1,
+	hitBox = {
+		x = 11,
+		y = 0,
+		width = 7,
+		height = 16
+	},
+	walkAnimation = playerWalkAnimation,
+	idleAnimation = playerIdleAnimation,
+	jumpAnimation = playerJumpAnimation,
+	currentAnimation = playerIdleAnimation,
+	flip = gfx.kImageUnflipped
 }
 
 world:add(
