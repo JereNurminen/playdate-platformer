@@ -9,15 +9,19 @@ gfx = playdate.graphics;
 
 local testRoom = import "rooms/test"
 
---
--- GLOBALS
-DeltaTime = 0
-LastFrameTime = 0
+local foregroundTiles = gfx.imagetable.new("images/foreground", 3)
+
+local playerIdleAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-idle"), true)
+local playerWalkAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-walk"), true)
+local playerJumpAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-jump"), false)
 
 ScreenSize = playdate.geometry.vector2D.new(400, 240)
 local screenCenter <const> = playdate.geometry.point.new(
 	(ScreenSize / 2):unpack()
 )
+
+DeltaTime = 0
+LastFrameTime = 0
 
 local colliders = bump.newWorld()
 local world = tiny.world()
@@ -174,19 +178,15 @@ function groundedSystem:process(e, dt)
 	e.timeSinceGrounded = e.timeSinceGrounded + dt
 end
 
+
 local tileDrawSystem = tiny.processingSystem()
 tileDrawSystem.filter = tiny.requireAll("pos", "tileIndex")
 function tileDrawSystem:process(e, dt)
 	if e.tileIndex ~= 0 then
-		local image = gfx.imagetable.new("images/foreground", 3)
-		local tile = image:getImage(e.tileIndex)
+		local tile = foregroundTiles:getImage(e.tileIndex)
 		tile:draw(e.pos.x, e.pos.y)
 	end
 end
-
-local playerIdleAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-idle"), true)
-local playerWalkAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-walk"), true)
-local playerJumpAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-jump"), false)
 
 local player = {
 	isPlayer = true,
