@@ -58,6 +58,12 @@ local function generateRoomEntities(room)
 								x = x,
 								y = y
 							},
+							sprite = {
+								offset = {
+									x = 0,
+									y = 0
+								}
+							},
 							tileIndex = tile
 						}
 				)
@@ -83,12 +89,27 @@ local function generateRoomEntities(room)
 		end
 	end
 
-	return processedTiles, processedColliders
+	local levelImage = gfx.image.new(ScreenSize.x, ScreenSize.y)
+	gfx.lockFocus(levelImage)
+	for i = 1, #processedTiles do
+		local x = processedTiles[i]
+		if x.tileIndex ~= nil and x.tileIndex ~= 0  then
+			local tile = foregroundTiles:getImage(x.tileIndex)
+			tile:draw(x.pos.x, x.pos.y)
+		end
+	end
+	gfx.unlockFocus()
+
+	local levelBg = {
+		image = levelImage
+	}
+
+	return processedColliders, levelBg
 end
 
 local playerMoveSystem = tiny.processingSystem()
 playerMoveSystem.filter = tiny.requireAll("speed", "pos", "isPlayer", "momentum", "isGrounded", "jumpStrength", "coyoteTime", "timeSinceGrounded")
-function playerMoveSystem:process(e, dt)
+function playerMoveSystem:process(e)
 	local moveVector = playdate.geometry.vector2D.new(0, 0)
 	if (playdate.buttonIsPressed(playdate.kButtonLeft)) then
 		moveVector.x = -1
@@ -120,33 +141,41 @@ end
 local momentumSystem = tiny.processingSystem()
 momentumSystem.filter = tiny.requireAll("momentum", "pos")
 function momentumSystem:process(e, dt)
-	local targetX = e.pos.x + e.momentum.x * dt
-	local targetY = e.pos.y + e.momentum.y * dt
+	local oldX = e.pos.x
+	local oldY = e.pos.y
+	local targetX = oldX + e.momentum.x * dt
+	local targetY = oldY + e.momentum.y * dt
 	local newX, newY = colliders:move(e, targetX, targetY)
 	e.pos.x = newX
 	e.pos.y = newY
+
+	if oldX == newX then
+		e.momentum.x = 0
+	end
+	if oldY == newY then
+		e.momentum.y = 0
+	end
 end
 
 local gravitySystem = tiny.processingSystem()
 gravitySystem.filter = tiny.requireAll("fallAcceleration", "momentum")
-function gravitySystem:process(e, dt)
+function gravitySystem:process(e)
 	if e.isGrounded == true then
 		return
 	end
 
-	local vector = playdate.geometry.vector2D.new(0, e.fallAcceleration)
 	e.momentum.y = e.momentum.y + e.fallAcceleration
 end
 
 local drawSystem = tiny.processingSystem()
-drawSystem.filter = tiny.requireAll("pos", "flip")
-function drawSystem:process(e, dt)
-	e.currentAnimation:draw(e.pos.x, e.pos.y, e.flip)
+drawSystem.filter = tiny.requireAll("pos", "flip", "sprite")
+function drawSystem:process(e)
+	e.currentAnimation:draw(e.pos.x + e.sprite.offset.x, e.pos.y + e.sprite.offset.y, e.flip)
 end
 
 local collisionSyncSystem = tiny.processingSystem()
-collisionSyncSystem.filter = tiny.requireAll("pos", "width", "height", "collisionLayer")
-function collisionSyncSystem:process(e, dt)
+collisionSyncSystem.filter = tiny.requireAll("pos", "width", "height", "collisionLayer", "hitBox")
+function collisionSyncSystem:process(e)
 	colliders:update(e, e.pos.x, e.pos.y, e.width, e.height)
 end
 
@@ -179,13 +208,10 @@ function groundedSystem:process(e, dt)
 end
 
 
-local tileDrawSystem = tiny.processingSystem()
-tileDrawSystem.filter = tiny.requireAll("pos", "tileIndex")
-function tileDrawSystem:process(e, dt)
-	if e.tileIndex ~= 0 then
-		local tile = foregroundTiles:getImage(e.tileIndex)
-		tile:draw(e.pos.x, e.pos.y)
-	end
+local levelDrawSystem = tiny.processingSystem()
+levelDrawSystem.filter = tiny.requireAll("image")
+function levelDrawSystem:process(e)
+	e.image:draw(0, 0)
 end
 
 local player = {
@@ -206,11 +232,11 @@ local player = {
 	isGrounded = false,
 	timeSinceGrounded = 0,
 	coyoteTime = 0.1,
-	hitBox = {
-		x = 11,
-		y = 0,
-		width = 7,
-		height = 16
+	sprite = {
+		offset = {
+			x = -8,
+			y = 0,
+		}
 	},
 	walkAnimation = playerWalkAnimation,
 	idleAnimation = playerIdleAnimation,
@@ -225,30 +251,32 @@ world:add(
     gravitySystem,
 	drawSystem,
 	momentumSystem,
-	tileDrawSystem
+	levelDrawSystem
 )
 
 addEntityWithCollisions(player)
 
-local tiles, levelColliders = generateRoomEntities(testRoom)
+local levelColliders, bgImage = generateRoomEntities(testRoom)
 
 for i = 1, #levelColliders do
 	addEntityWithCollisions(levelColliders[i])
 end
 
-for i = 1, #tiles do
-	world:add(tiles[i])
-end
+world:add(bgImage)
 
 world:refresh()
 gfx.setBackgroundColor(gfx.kColorBlack)
 
 function playdate:update(arg, ...)
-	playdate.timer.updateTimers()
 	gfx.clear()
-	DeltaTime = ( playdate.getCurrentTimeMilliseconds() - LastFrameTime ) / 1000
 	
 	-- run systems etc
-	world:update(DeltaTime)
-	LastFrameTime = playdate.getCurrentTimeMilliseconds()
+	world:update(playdate.getElapsedTime())
+	playdate:resetElapsedTime()
+	playdate:drawFPS()
+end
+
+function playdate.debugDraw()
+	playdate.setDebugDrawColor(1,0,0,1)
+	gfx.drawRect(player.pos.x, player.pos.y, player.width, player.height)
 end
