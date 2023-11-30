@@ -23,18 +23,20 @@ LastFrameTime = 0
 playerIdleAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-idle"), true)
 playerWalkAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-walk"), true)
 playerJumpAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.new("images/player-jump"), false)
+jumpEffectImageTable = playdate.graphics.imagetable.new("images/player-jump-fx")
 foregroundTiles = gfx.imagetable.new("images/foreground", 3)
 
 -- setup functions
 import "room-setup"
 
+-- entities
+import "jump-effect-entity"
+import "player-entity"
+
 -- systems
 import "player-systems"
 import "draw-systems"
 import "physics-systems"
-
--- entities
-import "player-entity"
 
 -- levels
 local testRoom = import "rooms/test"
@@ -53,6 +55,7 @@ world:add(
 	playerMoveSystem,
     gravitySystem,
 	drawSystem,
+	cleanUpSystem,
 	momentumSystem,
 	levelDrawSystem
 )

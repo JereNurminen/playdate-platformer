@@ -43,6 +43,10 @@ function groundedSystem:process(e, dt)
 			local other = cols[i].other
 			if other.collisionLayer == "platform" then
 				e.isGrounded = true
+				
+				if e.hasDoubleJumped ~= nil then
+					e.hasDoubleJumped = false
+				end
 
 				if not wasGrounded and e.isGrounded then
 					e.timeSinceGrounded = 0

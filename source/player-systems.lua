@@ -1,3 +1,7 @@
+local function isCoyoteTime(e)
+	return e.timeSinceGrounded <= e.coyoteTime
+end
+
 playerMoveSystem = Tiny.processingSystem()
 playerMoveSystem.filter = Tiny.requireAll(
 	"speed",
@@ -27,10 +31,23 @@ function playerMoveSystem:process(e)
 		e.currentAnimation = e.idleAnimation
 	end
 	if (playdate.buttonJustPressed(playdate.kButtonA)) then
-		if e.isGrounded or e.timeSinceGrounded <= e.coyoteTime then
+		-- normal jump
+		if e.isGrounded or
+		   isCoyoteTime(e) then
 			moveVector.y = -e.jumpStrength
 			e.isGrounded = false
 			e.currentAnimation = e.jumpAnimation
+			addJumpEffect(e.pos.x, e.pos.y)
+		end
+		-- double jump
+		if not e.isGrounded and
+		   not e.hasDoubleJumped and
+		   not isCoyoteTime(e) then
+			moveVector.y = -e.momentum.y - e.jumpStrength
+			e.isGrounded = false
+			e.currentAnimation = e.jumpAnimation
+			e.hasDoubleJumped = true
+			addJumpEffect(e.pos.x, e.pos.y)
 		end
 	end
 

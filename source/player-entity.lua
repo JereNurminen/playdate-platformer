@@ -15,6 +15,7 @@ player = {
 	collisionLayer = "player",
 	isGrounded = false,
 	timeSinceGrounded = 0,
+	hasDoubleJumped = false,
 	coyoteTime = 0.1,
 	sprite = {
 		offset = {
