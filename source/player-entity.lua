@@ -3,7 +3,7 @@ player = {
 	speed = 100,
 	pos = {
 		x = 0,
-		y = ScreenCenter.y - 42
+		y = ScreenCenter.y
 	},
 	momentum = playdate.geometry.vector2D.new(0, 0),
 	width = 16,
