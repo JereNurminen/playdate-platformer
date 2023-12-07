@@ -26,8 +26,16 @@ playerJumpAnimation = gfx.animation.loop.new(100, playdate.graphics.imagetable.n
 jumpEffectImageTable = playdate.graphics.imagetable.new("images/player-jump-fx")
 foregroundTiles = gfx.imagetable.new("images/foreground", 3)
 
+-- utilities
+function addEntityWithCollisions(e)
+	world:add(e)
+	colliders:add(e, e.pos.x, e.pos.y, e.width, e.height)
+end
+
+
 -- setup functions
 import "room-setup"
+import "level-loader"
 
 -- entities
 import "jump-effect-entity"
@@ -41,16 +49,9 @@ import "physics-systems"
 -- levels
 local testRoom = import "rooms/test"
 
-
 --
 
-
-local function addEntityWithCollisions(e)
-	world:add(e)
-	colliders:add(e, e.pos.x, e.pos.y, e.width, e.height)
-end
-
-world:add(
+baseSystems = {
 	groundedSystem,
 	playerMoveSystem,
     gravitySystem,
@@ -58,19 +59,10 @@ world:add(
 	cleanUpSystem,
 	momentumSystem,
 	levelDrawSystem
-)
+}
 
-addEntityWithCollisions(player)
+loadLevel(world, baseSystems, {player}, {}, testRoom)
 
-local levelColliders, bgImage = generateRoomEntities(testRoom)
-
-for i = 1, #levelColliders do
-	addEntityWithCollisions(levelColliders[i])
-end
-
-world:add(bgImage)
-
-world:refresh()
 gfx.setBackgroundColor(gfx.kColorBlack)
 
 function playdate:update(arg, ...)
