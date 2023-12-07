@@ -6,7 +6,7 @@ function newEffect(x, y, animation)
         },
         sprite = {
             offset = {
-                x = -8,
+                x = 0,
                 y = 0,
             }
         },
